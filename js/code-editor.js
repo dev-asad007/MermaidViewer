@@ -88,16 +88,16 @@ const mermaidLanguage = StreamLanguage.define({
 });
 
 const mermaidHighlight = HighlightStyle.define([
-  { tag: tags.keyword, color: "#ff8b76", fontWeight: "650" },
-  { tag: tags.variableName, color: "#d7def0" },
-  { tag: tags.propertyName, color: "#82d9b9" },
-  { tag: tags.string, color: "#f3c97b" },
-  { tag: tags.number, color: "#c6a5ff" },
-  { tag: tags.bool, color: "#77a7ff" },
-  { tag: tags.atom, color: "#9ddfca" },
-  { tag: tags.operator, color: "#54d1a5", fontWeight: "700" },
-  { tag: tags.comment, color: "#667085", fontStyle: "italic" },
-  { tag: tags.bracket, color: "#aeb8cd" },
+  { tag: tags.keyword, color: "var(--syntax-keyword)", fontWeight: "650" },
+  { tag: tags.variableName, color: "var(--syntax-variable)" },
+  { tag: tags.propertyName, color: "var(--syntax-property)" },
+  { tag: tags.string, color: "var(--syntax-string)" },
+  { tag: tags.number, color: "var(--syntax-number)" },
+  { tag: tags.bool, color: "var(--syntax-bool)" },
+  { tag: tags.atom, color: "var(--syntax-atom)" },
+  { tag: tags.operator, color: "var(--syntax-operator)", fontWeight: "700" },
+  { tag: tags.comment, color: "var(--syntax-comment)", fontStyle: "italic" },
+  { tag: tags.bracket, color: "var(--syntax-bracket)" },
 ]);
 
 const indentedFoldService = foldService.of((state, from) => {
@@ -150,12 +150,12 @@ const editorTheme = EditorView.theme({
     height: "100%",
     backgroundColor: "transparent",
     color: "var(--editor-text)",
-    fontSize: "12px",
+    fontSize: "13px",
   },
   ".cm-scroller": {
     overflow: "auto",
     fontFamily: "var(--font-code)",
-    lineHeight: "1.75",
+    lineHeight: "1.7",
   },
   ".cm-content": { padding: "16px 0 42px", caretColor: "var(--coral)" },
   ".cm-line": { padding: "0 18px 0 10px" },

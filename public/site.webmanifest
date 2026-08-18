@@ -1,11 +1,18 @@
 {
   "name": "Mermaid Studio",
   "short_name": "Mermaid Studio",
-  "description": "A private, browser-based Mermaid diagram editor.",
+  "description": "A free, private Mermaid diagram editor and viewer with local projects, live preview, version history, and high-quality export.",
+  "id": "./",
   "start_url": "./",
+  "scope": "./",
+  "lang": "en",
+  "dir": "ltr",
   "display": "standalone",
-  "background_color": "#0b0d12",
-  "theme_color": "#0b0d12",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#090d14",
+  "theme_color": "#090d14",
+  "categories": ["developer", "productivity", "utilities"],
   "icons": [
     {
       "src": "./assets/favicon.png",

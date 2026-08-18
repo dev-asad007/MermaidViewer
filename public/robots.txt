@@ -1,4 +1,4 @@
 User-agent: *
-Allow: /
+Allow: /MermaidViewer/
 
 Sitemap: https://dev-asad007.github.io/MermaidViewer/sitemap.xml
