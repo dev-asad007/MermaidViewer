@@ -1,0 +1,19 @@
+{
+  "name": "mermaid-studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A private, browser-based Mermaid diagram editor with local projects and high-resolution exports.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "jspdf": "3.0.3",
+    "mermaid": "11.12.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.3"
+  }
+}

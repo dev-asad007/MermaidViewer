@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dev-asad007.github.io/MermaidViewer/sitemap.xml

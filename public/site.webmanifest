@@ -1,0 +1,17 @@
+{
+  "name": "Mermaid Studio",
+  "short_name": "Mermaid Studio",
+  "description": "A private, browser-based Mermaid diagram editor.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    {
+      "src": "./assets/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
