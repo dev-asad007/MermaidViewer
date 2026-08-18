@@ -127,19 +127,18 @@
         </div>
 
         <nav class="header-actions" aria-label="Project actions">
-          <a class="button ghost compact guide-action" href="./guide.html"><span aria-hidden="true">?</span> Guide</a>
-          <button class="button ghost compact" id="new-project" type="button"><span aria-hidden="true">＋</span> New</button>
-          <button class="button ghost compact" id="open-project" type="button"><span aria-hidden="true">↗</span> Open</button>
-          <button class="button ghost compact folder-action" id="open-folder" type="button"><span aria-hidden="true">▰</span> Folder</button>
-          <button class="button ghost compact" id="autosave-toggle" type="button" aria-pressed="true"><span aria-hidden="true">●</span> Autosave</button>
-          <button class="button primary compact" id="save-project" type="button"><span aria-hidden="true">↓</span> Save project</button>
+          <a class="button ghost compact guide-action" href="./guide.html"><span aria-hidden="true">?</span> Help</a>
+          <button class="button ghost compact" id="new-project" type="button"><span aria-hidden="true">＋</span> New project</button>
+          <button class="button ghost compact" id="open-project" type="button"><span aria-hidden="true">↗</span> Open project</button>
+          <button id="open-folder" type="button" hidden>Open folder</button>
+          <button class="button soft compact" id="save-project" type="button"><span aria-hidden="true">↓</span> Download project</button>
           <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">☾</button>
           <button class="icon-button mobile-menu-button" id="mobile-menu" type="button" aria-label="Open project menu">•••</button>
         </nav>
       </header>
 
       <main class="workspace">
-        <nav class="activity-bar" aria-label="Workspace tools">
+        <nav class="activity-bar" aria-label="Workspace tools" hidden>
           <button class="activity-button active" type="button" data-workspace-tool="files" aria-label="Projects and files" title="Projects and files (Ctrl/Cmd+B)"><span aria-hidden="true">▱</span><small>Files</small></button>
           <button class="activity-button active" type="button" data-workspace-tool="editor" aria-label="Code editor" title="Code editor (Ctrl/Cmd+J)"><span aria-hidden="true">⌘</span><small>Code</small></button>
           <button class="activity-button" type="button" data-workspace-tool="templates" aria-label="Templates" title="Templates"><span aria-hidden="true">▦</span><small>Templates</small></button>
@@ -151,42 +150,43 @@
         </nav>
         <aside class="project-panel" id="project-panel" aria-label="Project explorer">
           <div class="panel-tabs" role="tablist" aria-label="Project panel">
-            <button class="panel-tab active" type="button" role="tab" aria-selected="true" data-panel-tab="files">Files</button>
-            <button class="panel-tab" type="button" role="tab" aria-selected="false" data-panel-tab="notes">Notes</button>
+            <button class="panel-tab active" type="button" role="tab" aria-selected="true" data-panel-tab="files">Diagrams</button>
+            <button class="panel-tab" type="button" role="tab" aria-selected="false" data-panel-tab="notes">Notes &amp; review</button>
           </div>
 
           <section class="panel-view active" data-panel-view="files">
             <div class="panel-heading">
               <div>
-                <span class="eyebrow">Workspace</span>
+                <span class="eyebrow">Current project</span>
                 <h2 id="folder-name">Local project</h2>
               </div>
               <div class="panel-heading-actions">
-                <button class="icon-button small" id="add-file" type="button" aria-label="Add diagram" title="Add diagram">＋</button>
+                <button class="button soft compact add-diagram-button" id="add-file" type="button"><span aria-hidden="true">＋</span> New diagram</button>
                 <button class="icon-button small" id="collapse-sidebar" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button>
               </div>
             </div>
+            <p class="sidebar-intro">Choose a diagram, edit the code, then download the result from Preview.</p>
             <div class="project-switcher-wrap">
-              <label for="project-switcher">Projects</label>
+              <label for="project-switcher">Switch project</label>
               <select id="project-switcher" aria-label="Switch local project"></select>
               <div class="project-switcher-actions">
-                <button type="button" id="new-local-project">New</button>
+                <button type="button" id="new-local-project">＋ New project</button>
                 <button type="button" id="duplicate-project">Duplicate</button>
-                <button type="button" id="delete-project">Delete</button>
+                <button class="danger-action" type="button" id="delete-project">Delete</button>
               </div>
             </div>
             <label class="search-field">
               <span aria-hidden="true">⌕</span>
-              <span class="sr-only">Filter diagrams</span>
-              <input id="file-search" type="search" placeholder="Filter diagrams" autocomplete="off" />
+              <span class="sr-only">Find a diagram</span>
+              <input id="file-search" type="search" placeholder="Find a diagram" autocomplete="off" />
               <kbd>/</kbd>
             </label>
             <div class="file-list" id="file-list" role="listbox" aria-label="Project diagrams"></div>
             <div class="folder-card" id="folder-card">
               <div class="folder-card-icon" aria-hidden="true">▰</div>
               <div>
-                <strong>Work with a folder</strong>
-                <p>Open local Mermaid files and save edits back to them.</p>
+                <strong>Open a local folder</strong>
+                <p>Edit existing Mermaid files from your computer.</p>
               </div>
               <div class="folder-card-actions">
                 <button class="text-button" id="save-folder" type="button" hidden>Save source files</button>
@@ -215,8 +215,9 @@
           </section>
 
           <footer class="project-footer">
+            <button class="footer-action" id="autosave-toggle" type="button" aria-pressed="true"><span aria-hidden="true">●</span> Autosave</button>
             <button class="footer-action" id="history-button" type="button"><span aria-hidden="true">↶</span> History <span class="count" id="history-count">0</span></button>
-            <button class="footer-action" id="shortcuts-button" type="button"><span aria-hidden="true">⌘</span> Shortcuts</button>
+            <button class="footer-action" id="shortcuts-button" type="button"><span aria-hidden="true">?</span> Help</button>
           </footer>
         </aside>
 
@@ -224,7 +225,7 @@
           <header class="pane-header">
             <div class="pane-title">
               <span class="status-dot coral" aria-hidden="true"></span>
-              <h2 id="editor-heading">Code</h2>
+              <h2 id="editor-heading">1. Edit</h2>
               <span class="file-type">MERMAID</span>
             </div>
             <div class="pane-tools">
@@ -249,7 +250,7 @@
           <header class="pane-header">
             <div class="pane-title">
               <span class="status-dot mint" aria-hidden="true"></span>
-              <h2 id="preview-heading">Preview</h2>
+              <h2 id="preview-heading">2. Preview</h2>
               <span class="render-time" id="render-time">Ready</span>
             </div>
             <div class="pane-tools">
@@ -274,13 +275,13 @@
           <footer class="preview-footer">
             <div class="privacy-pill"><span aria-hidden="true">◆</span> Rendered on this device</div>
             <button class="button ghost compact" id="share-link" type="button">Copy link</button>
-            <button class="button export compact" id="export-button" type="button">Export <span aria-hidden="true">↗</span></button>
+            <button class="button export compact" id="export-button" type="button">3. Download diagram <span aria-hidden="true">↓</span></button>
           </footer>
         </section>
       </main>
 
       <nav class="mobile-tabs" aria-label="Workspace views">
-        <button type="button" data-mobile-view="files"><span aria-hidden="true">▰</span> Files</button>
+        <button type="button" data-mobile-view="files"><span aria-hidden="true">▰</span> Diagrams</button>
         <button class="active" type="button" data-mobile-view="code"><span aria-hidden="true">⌘</span> Code</button>
         <button type="button" data-mobile-view="preview"><span aria-hidden="true">◇</span> Preview</button>
       </nav>
@@ -302,7 +303,7 @@
     <dialog class="modal export-modal" id="export-modal">
       <form method="dialog" class="modal-shell export-shell">
         <header class="modal-header">
-          <div><span class="eyebrow">Ready to share</span><h2>Export diagram</h2><p>Download a crisp copy without watermarks.</p></div>
+          <div><span class="eyebrow">Step 3</span><h2>Download diagram</h2><p>Choose a format. Your file is prepared entirely on this device.</p></div>
           <button class="icon-button close-modal" type="submit" value="cancel" aria-label="Close export">×</button>
         </header>
         <div class="export-layout">
@@ -327,7 +328,7 @@
               </div>
               <p class="field-hint" id="resolution-hint">High quality · ideal for presentations and reports</p>
             </fieldset>
-            <label class="select-field">Background
+            <label class="select-field" id="background-field">Background
               <select id="export-background"><option value="theme">Match theme</option><option value="light">White</option><option value="transparent">Transparent</option></select>
             </label>
           </div>
@@ -338,8 +339,8 @@
           </div>
         </div>
         <footer class="modal-footer">
-          <span>No account. No watermark.</span>
-          <button class="button primary" id="download-export" type="button">Download file</button>
+          <span id="export-status" aria-live="polite">Preparing the download on this device…</span>
+          <a class="button primary" id="download-export" aria-disabled="true">Preparing file…</a>
         </footer>
       </form>
     </dialog>
@@ -347,7 +348,7 @@
     <dialog class="modal history-modal" id="history-modal">
       <form method="dialog" class="modal-shell compact-shell">
         <header class="modal-header">
-          <div><span class="eyebrow">Local snapshots</span><h2>Version history</h2><p>Restore an earlier edit from this browser.</p></div>
+          <div><span class="eyebrow">Local snapshots</span><h2>Version history</h2><p>Restore an earlier edit saved in this browser.</p></div>
           <div class="modal-header-actions"><button class="button ghost compact" id="clear-history" type="button">Clear history</button><button class="icon-button close-modal" type="submit" value="cancel" aria-label="Close history">×</button></div>
         </header>
         <div class="history-list" id="history-list"></div>
@@ -358,7 +359,7 @@
       <form method="dialog" class="modal-shell compact-shell">
         <header class="modal-header"><div><span class="eyebrow">Work faster</span><h2>Keyboard shortcuts</h2></div><button class="icon-button close-modal" type="submit" value="cancel" aria-label="Close shortcuts">×</button></header>
         <div class="shortcut-list">
-          <div><span>Save project</span><kbd>Ctrl / ⌘</kbd><kbd>S</kbd></div>
+          <div><span>Download portable project</span><kbd>Ctrl / ⌘</kbd><kbd>S</kbd></div>
           <div><span>Open project</span><kbd>Ctrl / ⌘</kbd><kbd>O</kbd></div>
           <div><span>New diagram</span><kbd>Ctrl / ⌘</kbd><kbd>N</kbd></div>
           <div><span>Undo / Redo</span><kbd>Ctrl / ⌘</kbd><kbd>Z</kbd></div>

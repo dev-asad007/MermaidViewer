@@ -23,7 +23,7 @@ import {
   uid,
   writeTextFile,
 } from "./project-store.js";
-import { copySvgInto, exportDiagram } from "./exporter.js";
+import { copySvgInto, createExportFile } from "./exporter.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -58,6 +58,8 @@ let currentTheme = getSavedTheme();
 let codeEditor = null;
 let lastRenderErrorLine = null;
 let folderAutosaveTimer = null;
+let exportObjectUrl = null;
+let exportPrepareSequence = 0;
 
 function activeFile() {
   return project.files.find((file) => file.id === project.activeFileId) || project.files[0];
@@ -602,8 +604,8 @@ function setFolderCard(handle, reconnect = false) {
     button.onclick = () => chooseFolder(reconnect ? handle : null);
     saveButton.hidden = reconnect;
   } else {
-    title.textContent = "Work with a folder";
-    copy.textContent = "Open local Mermaid files and save edits back to them.";
+    title.textContent = "Open a local folder";
+    copy.textContent = "Edit existing Mermaid files from your computer.";
     button.textContent = "Choose folder";
     button.onclick = () => chooseFolder();
     saveButton.hidden = true;
@@ -817,25 +819,32 @@ function updateExportDialog() {
   const scale = Number($('input[name="scale"]:checked').value);
   $$(".format-option").forEach((option) => option.classList.toggle("selected", $("input", option).checked));
   $("#quality-fieldset").hidden = ["svg", "mmd", "md"].includes(format);
-  $("#export-background").disabled = ["mmd", "md"].includes(format);
+  $("#background-field").hidden = ["mmd", "md"].includes(format);
   const extension = format === "jpeg" ? "jpg" : format;
   $("#export-filename").textContent = `${safeBaseName(activeFile().name)}.${extension}`;
   $("#export-quality").textContent = ["svg", "mmd", "md"].includes(format) ? (format === "svg" ? "Vector" : "Source") : `${scale}× resolution`;
   $("#resolution-hint").textContent = scale === 4 ? "Ultra quality · suitable for print" : scale === 2 ? "High quality · ideal for presentations and reports" : "Standard quality · fastest download";
   copySvgInto(diagramCanvas, $("#export-preview"));
+  prepareExportDownload();
 }
 
-async function performExport() {
+async function prepareExportDownload() {
+  const sequence = ++exportPrepareSequence;
   const format = $('input[name="format"]:checked').value;
   const scale = Number($('input[name="scale"]:checked').value);
   let background = $("#export-background").value;
   if (background === "theme") background = currentTheme === "dark" ? "#0b0d12" : "#ffffff";
   if (background === "light") background = "#ffffff";
-  const button = $("#download-export");
-  button.disabled = true;
-  button.textContent = "Preparing…";
+  const link = $("#download-export");
+  const status = $("#export-status");
+  link.removeAttribute("href");
+  link.removeAttribute("download");
+  link.setAttribute("aria-disabled", "true");
+  link.textContent = "Preparing file…";
+  status.textContent = "Preparing the download on this device…";
+
   try {
-    await exportDiagram({
+    const file = await createExportFile({
       container: diagramCanvas,
       format,
       scale,
@@ -843,14 +852,38 @@ async function performExport() {
       filename: activeFile().name,
       source: codeEditor.getValue(),
     });
-    exportModal.close();
-    toast(`${format.toUpperCase()} downloaded`);
+
+    if (sequence !== exportPrepareSequence) return;
+    if (exportObjectUrl) URL.revokeObjectURL(exportObjectUrl);
+    exportObjectUrl = URL.createObjectURL(file.blob);
+    link.href = exportObjectUrl;
+    link.download = file.filename;
+    link.removeAttribute("aria-disabled");
+    link.textContent = `Download ${format.toUpperCase()}`;
+    status.textContent = `${file.filename} is ready · no upload required`;
   } catch (error) {
+    if (sequence !== exportPrepareSequence) return;
+    link.textContent = "Try preparing again";
+    status.textContent = error.message || "The file could not be prepared.";
     toast(error.message || "Export failed.", "error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "Download file";
   }
+}
+
+function completePreparedDownload(event) {
+  const link = event.currentTarget;
+  if (link.getAttribute("aria-disabled") === "true" || !link.href) {
+    event.preventDefault();
+    prepareExportDownload();
+    return;
+  }
+  const format = $('input[name="format"]:checked').value.toUpperCase();
+  exportModal.close();
+  toast(`${format} download started`);
+}
+
+function openExportDialog() {
+  updateExportDialog();
+  exportModal.showModal();
 }
 
 function encodeSource(value) {
@@ -940,6 +973,7 @@ function applyWorkspaceState() {
   $('[data-workspace-tool="editor"]')?.classList.toggle("active", !editorCollapsed);
   $("#autosave-toggle").setAttribute("aria-pressed", String(Boolean(project.settings.autosave)));
   $("#autosave-toggle").classList.toggle("autosave-off", !project.settings.autosave);
+  $("#autosave-toggle").lastChild.textContent = project.settings.autosave ? " Autosave on" : " Autosave off";
 }
 
 function toggleSidebar(forceOpen) {
@@ -985,8 +1019,7 @@ function handleWorkspaceTool(tool) {
     renderTemplates();
     templatesModal.showModal();
   } else if (tool === "export") {
-    updateExportDialog();
-    exportModal.showModal();
+    openExportDialog();
   } else if (tool === "history") {
     renderHistory();
     historyModal.showModal();
@@ -1001,6 +1034,7 @@ const COMMANDS = [
   { icon: "＋", label: "New local project", hint: "", action: newProject },
   { icon: "↗", label: "Open project file", hint: "Ctrl/Cmd+O", action: openProject },
   { icon: "↓", label: "Save portable project", hint: "Ctrl/Cmd+S", action: saveProject },
+  { icon: "↗", label: "Download diagram", hint: "Ctrl/Cmd+Alt+E", action: openExportDialog },
   { icon: "▦", label: "Choose a template", hint: "", action: () => handleWorkspaceTool("templates") },
   { icon: "↶", label: "Open version history", hint: "", action: () => handleWorkspaceTool("history") },
   { icon: "◌", label: "Open comments", hint: "", action: () => handleWorkspaceTool("comments") },
@@ -1073,6 +1107,7 @@ function createMobileActions() {
   menu.hidden = true;
   const actions = [
     ["Guide & examples", () => { location.href = "./guide.html"; }],
+    ["Download diagram", openExportDialog],
     ["New project", newProject],
     ["Open project", openProject],
     ["Open folder", () => chooseFolder()],
@@ -1191,9 +1226,9 @@ function bindEvents() {
   });
   previewStage.addEventListener("pointerup", () => { dragStart = null; });
 
-  $("#export-button").addEventListener("click", () => { updateExportDialog(); exportModal.showModal(); });
+  $("#export-button").addEventListener("click", openExportDialog);
   $$('input[name="format"], input[name="scale"], #export-background').forEach((control) => control.addEventListener("change", updateExportDialog));
-  $("#download-export").addEventListener("click", performExport);
+  $("#download-export").addEventListener("click", completePreparedDownload);
   $("#share-link").addEventListener("click", copyShareLink);
   $$("[data-mobile-view]").forEach((button) => button.addEventListener("click", () => setMobileView(button.dataset.mobileView)));
   $("#command-button").addEventListener("click", openCommandPalette);
@@ -1215,7 +1250,7 @@ function bindEvents() {
     if (command && event.key.toLowerCase() === "j") { event.preventDefault(); toggleEditor(); }
     if (command && event.shiftKey && event.key.toLowerCase() === "p") { event.preventDefault(); openCommandPalette(); }
     if (command && event.shiftKey && event.key.toLowerCase() === "f") { event.preventDefault(); quickFixSource(); }
-    if (command && event.altKey && event.key.toLowerCase() === "e") { event.preventDefault(); updateExportDialog(); exportModal.showModal(); }
+    if (command && event.altKey && event.key.toLowerCase() === "e") { event.preventDefault(); openExportDialog(); }
     if (event.key === "F11") { event.preventDefault(); toggleFullscreen(); }
     if (!command && event.key === "/" && !codeEditor.view.hasFocus && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
       event.preventDefault();

@@ -1,6 +1,6 @@
 import { safeBaseName } from "./project-store.js";
 
-function downloadBlob(blob, filename) {
+export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -9,6 +9,38 @@ function downloadBlob(blob, filename) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function replaceForeignObjectLabels(source, clone) {
+  const sourceLabels = [...source.querySelectorAll("foreignObject")];
+  const cloneLabels = [...clone.querySelectorAll("foreignObject")];
+
+  cloneLabels.forEach((foreignObject, index) => {
+    const sourceObject = sourceLabels[index];
+    const content = sourceObject?.textContent?.replace(/\s+/g, " ").trim();
+    if (!content) {
+      foreignObject.remove();
+      return;
+    }
+
+    const x = Number.parseFloat(foreignObject.getAttribute("x") || "0");
+    const y = Number.parseFloat(foreignObject.getAttribute("y") || "0");
+    const width = Number.parseFloat(foreignObject.getAttribute("width") || "0");
+    const height = Number.parseFloat(foreignObject.getAttribute("height") || "0");
+    const sourceText = sourceObject.querySelector("span, p, div") || sourceObject;
+    const computed = getComputedStyle(sourceText);
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", String(x + width / 2));
+    text.setAttribute("y", String(y + height / 2));
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("fill", computed.color || "currentColor");
+    text.setAttribute("font-family", computed.fontFamily || "Inter, system-ui, sans-serif");
+    text.setAttribute("font-size", computed.fontSize || "14px");
+    text.setAttribute("font-weight", computed.fontWeight || "400");
+    text.textContent = content;
+    foreignObject.replaceWith(text);
+  });
 }
 
 function dimensionsOf(svg) {
@@ -52,7 +84,11 @@ function svgBlob(svg, background) {
 
 async function svgToCanvas(svg, scale, background) {
   await document.fonts?.ready;
-  const { blob, width, height } = svgBlob(svg, background);
+  const prepared = prepareSvg(svg, background);
+  replaceForeignObjectLabels(svg, prepared.clone);
+  const xml = new XMLSerializer().serializeToString(prepared.clone);
+  const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+  const { width, height } = prepared;
   const maxSide = 16000;
   const safeScale = Math.min(scale, maxSide / width, maxSide / height);
   const canvas = document.createElement("canvas");
@@ -67,8 +103,9 @@ async function svgToCanvas(svg, scale, background) {
     const image = new Image();
     image.decoding = "async";
     await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error("The diagram could not be converted to an image."));
+      const timeout = setTimeout(() => reject(new Error("Image preparation timed out. Try SVG export instead.")), 10000);
+      image.onload = () => { clearTimeout(timeout); resolve(); };
+      image.onerror = () => { clearTimeout(timeout); reject(new Error("The diagram could not be converted to an image.")); };
       image.src = url;
     });
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
@@ -90,25 +127,22 @@ export function copySvgInto(sourceContainer, targetContainer) {
   targetContainer.replaceChildren(svg ? svg.cloneNode(true) : document.createTextNode("Preview unavailable"));
 }
 
-export async function exportDiagram({ container, format, scale = 2, background = "transparent", filename, source }) {
+export async function createExportFile({ container, format, scale = 2, background = "transparent", filename, source }) {
   const svg = container.querySelector("svg");
   const base = safeBaseName(filename);
 
   if (format === "mmd") {
-    downloadBlob(new Blob([source], { type: "text/plain;charset=utf-8" }), `${base}.mmd`);
-    return;
+    return { blob: new Blob([source], { type: "text/plain;charset=utf-8" }), filename: `${base}.mmd` };
   }
   if (format === "md") {
     const markdown = `# ${filename.replace(/\.[^.]+$/, "")}\n\n\`\`\`mermaid\n${source.trim()}\n\`\`\`\n`;
-    downloadBlob(new Blob([markdown], { type: "text/markdown;charset=utf-8" }), `${base}.md`);
-    return;
+    return { blob: new Blob([markdown], { type: "text/markdown;charset=utf-8" }), filename: `${base}.md` };
   }
   if (!svg) throw new Error("Render the diagram before exporting it.");
 
   if (format === "svg") {
     const { blob } = svgBlob(svg, background);
-    downloadBlob(blob, `${base}.svg`);
-    return;
+    return { blob, filename: `${base}.svg` };
   }
 
   if (format === "png" || format === "jpeg") {
@@ -116,8 +150,7 @@ export async function exportDiagram({ container, format, scale = 2, background =
     const canvas = await svgToCanvas(svg, scale, rasterBackground);
     const type = format === "png" ? "image/png" : "image/jpeg";
     const blob = await canvasBlob(canvas, type, 0.96);
-    downloadBlob(blob, `${base}.${format === "jpeg" ? "jpg" : "png"}`);
-    return;
+    return { blob, filename: `${base}.${format === "jpeg" ? "jpg" : "png"}` };
   }
 
   if (format === "pdf") {
@@ -134,9 +167,14 @@ export async function exportDiagram({ container, format, scale = 2, background =
     const height = canvas.height * ratio;
     pdf.setProperties({ title: filename, subject: "Mermaid diagram", creator: "Mermaid Studio" });
     pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pageWidth - width) / 2, (pageHeight - height) / 2, width, height, undefined, "FAST");
-    pdf.save(`${base}.pdf`);
-    return;
+    return { blob: pdf.output("blob"), filename: `${base}.pdf` };
   }
 
   throw new Error(`Unsupported export format: ${format}`);
+}
+
+export async function exportDiagram(options) {
+  const file = await createExportFile(options);
+  downloadBlob(file.blob, file.filename);
+  return file;
 }
