@@ -1,6 +1,8 @@
 import { DEFAULT_CODE } from "./templates.js";
 
 const STORAGE_KEY = "mermaid-studio:project:v1";
+const LIBRARY_KEY = "mermaid-studio:project-library:v1";
+const CURRENT_PROJECT_KEY = "mermaid-studio:current-project";
 const THEME_KEY = "mermaid-studio:theme";
 const DB_NAME = "mermaid-studio-handles";
 const DB_VERSION = 1;
@@ -18,6 +20,7 @@ export function createFile(name = "main.mmd", content = DEFAULT_CODE) {
     name,
     content,
     notes: "",
+    comments: [],
     createdAt: now,
     updatedAt: now,
     sourcePath: null,
@@ -27,13 +30,14 @@ export function createFile(name = "main.mmd", content = DEFAULT_CODE) {
 export function createProject(name = "Untitled project") {
   const firstFile = createFile();
   return {
+    id: uid("project"),
     kind: "mermaid-studio-project",
     version: 1,
     name,
     activeFileId: firstFile.id,
     files: [firstFile],
     history: [],
-    settings: { diagramTheme: "default" },
+    settings: { diagramTheme: "default", autosave: true, sidebarCollapsed: false, editorCollapsed: false },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -55,9 +59,10 @@ export function normalizeProject(input) {
       name: ensureSourceExtension(file.name || `diagram-${index + 1}.mmd`),
       content: String(file.content || ""),
       notes: String(file.notes || ""),
+      comments: Array.isArray(file.comments) ? file.comments : [],
     })),
-    history: Array.isArray(input.history) ? input.history.slice(-30) : [],
-    settings: { diagramTheme: "default", ...(input.settings || {}) },
+    history: Array.isArray(input.history) ? input.history.slice(-100) : [],
+    settings: { diagramTheme: "default", autosave: true, sidebarCollapsed: false, editorCollapsed: false, ...(input.settings || {}) },
   };
 
   if (!project.files.length) project.files.push(createFile());
@@ -82,6 +87,10 @@ export function safeBaseName(name) {
 
 export function loadLocalProject() {
   try {
+    const projects = getLocalProjects();
+    const currentId = localStorage.getItem(CURRENT_PROJECT_KEY);
+    const current = projects.find((project) => project.id === currentId) || projects[0];
+    if (current) return current;
     const value = localStorage.getItem(STORAGE_KEY);
     return value ? normalizeProject(JSON.parse(value)) : createProject();
   } catch (error) {
@@ -92,7 +101,37 @@ export function loadLocalProject() {
 
 export function saveLocalProject(project) {
   project.updatedAt = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+  const normalized = normalizeProject(project);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  const projects = getLocalProjects();
+  const index = projects.findIndex((item) => item.id === normalized.id);
+  if (index >= 0) projects[index] = normalized;
+  else projects.unshift(normalized);
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(projects.slice(0, 20)));
+  localStorage.setItem(CURRENT_PROJECT_KEY, normalized.id);
+}
+
+export function getLocalProjects() {
+  try {
+    const value = localStorage.getItem(LIBRARY_KEY);
+    const projects = value ? JSON.parse(value) : [];
+    return Array.isArray(projects) ? projects.map(normalizeProject) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function loadLocalProjectById(id) {
+  return getLocalProjects().find((project) => project.id === id) || null;
+}
+
+export function removeLocalProject(id) {
+  const projects = getLocalProjects().filter((project) => project.id !== id);
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(projects));
+  if (localStorage.getItem(CURRENT_PROJECT_KEY) === id) {
+    if (projects[0]) localStorage.setItem(CURRENT_PROJECT_KEY, projects[0].id);
+    else localStorage.removeItem(CURRENT_PROJECT_KEY);
+  }
 }
 
 export function getSavedTheme() {

@@ -1,16 +1,20 @@
 import mermaid from "mermaid";
 import { TEMPLATES, DEFAULT_CODE } from "./templates.js";
+import { createCodeEditor } from "./code-editor.js";
 import {
   createFile,
   createProject,
   ensureSourceExtension,
   getSavedDirectoryHandle,
   getSavedTheme,
+  getLocalProjects,
+  loadLocalProjectById,
   loadLocalProject,
   normalizeProject,
   projectFromDirectory,
   readDirectory,
   readProjectFile,
+  removeLocalProject,
   safeBaseName,
   saveDirectoryHandle,
   saveLocalProject,
@@ -24,8 +28,7 @@ import { copySvgInto, exportDiagram } from "./exporter.js";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-const editor = $("#editor");
-const lineNumbers = $("#line-numbers");
+const editorHost = $("#editor");
 const diagramCanvas = $("#diagram-canvas");
 const previewStage = $("#preview-stage");
 const renderError = $("#render-error");
@@ -37,6 +40,7 @@ const templatesModal = $("#templates-modal");
 const exportModal = $("#export-modal");
 const historyModal = $("#history-modal");
 const shortcutsModal = $("#shortcuts-modal");
+const commandModal = $("#command-modal");
 
 let project = loadLocalProject();
 let projectFileHandle = null;
@@ -51,6 +55,9 @@ let zoom = 1;
 let pan = { x: 0, y: 0 };
 let dragStart = null;
 let currentTheme = getSavedTheme();
+let codeEditor = null;
+let lastRenderErrorLine = null;
+let folderAutosaveTimer = null;
 
 function activeFile() {
   return project.files.find((file) => file.id === project.activeFileId) || project.files[0];
@@ -70,8 +77,8 @@ function initMermaid() {
 function setDirty(value = true) {
   dirty = value;
   saveState.classList.toggle("dirty", value);
-  saveState.lastChild.textContent = value ? " Unsaved changes" : " Saved locally";
-  if (value) scheduleLocalSave();
+  saveState.lastChild.textContent = value ? " Unsaved changes" : (project.settings.autosave ? " Autosaved" : " Saved locally");
+  if (value && project.settings.autosave) scheduleLocalSave();
 }
 
 function scheduleLocalSave() {
@@ -80,11 +87,29 @@ function scheduleLocalSave() {
     try {
       saveLocalProject(project);
       setDirty(false);
+      scheduleFolderAutosave();
     } catch (error) {
       toast("Browser storage is full. Save a project file to keep your work.", "error");
       console.error(error);
     }
   }, 550);
+}
+
+function scheduleFolderAutosave() {
+  clearTimeout(folderAutosaveTimer);
+  if (!project.settings.autosave || !directoryHandle) return;
+  const file = activeFile();
+  const handle = fileHandles.get(file?.id);
+  if (!file || !handle) return;
+  folderAutosaveTimer = setTimeout(async () => {
+    try {
+      await writeTextFile(handle, `${file.content.trimEnd()}\n`);
+      saveState.lastChild.textContent = " Autosaved to folder";
+    } catch (error) {
+      console.warn("Folder autosave failed", error);
+      toast("Browser copy saved; folder autosave needs permission.", "error");
+    }
+  }, 900);
 }
 
 function saveLocalNow() {
@@ -111,9 +136,9 @@ function createSnapshot(label = "Saved version") {
     createdAt: new Date().toISOString(),
     label,
   });
-  project.history = project.history.slice(-30);
+  project.history = project.history.slice(-100);
   updateHistoryCount();
-  scheduleLocalSave();
+  if (project.settings.autosave) scheduleLocalSave();
 }
 
 function updateHistoryCount() {
@@ -125,18 +150,31 @@ function updateProjectHeader() {
   $("#project-title").textContent = project.name;
   $("#folder-name").textContent = directoryHandle?.name || project.name;
   document.title = `${activeFile()?.name || project.name} — Mermaid Studio`;
+  renderProjectSwitcher();
 }
 
 function updateLineNumbers() {
-  const count = Math.max(1, editor.value.split("\n").length);
-  lineNumbers.textContent = Array.from({ length: count }, (_, index) => index + 1).join("\n");
-  $("#character-count").textContent = `${editor.value.length.toLocaleString()} characters`;
+  const value = codeEditor?.getValue() || "";
+  $("#character-count").textContent = `${value.length.toLocaleString()} characters`;
 }
 
-function updateCursorPosition() {
-  const before = editor.value.slice(0, editor.selectionStart);
-  const lines = before.split("\n");
-  $("#cursor-position").textContent = `Ln ${lines.length}, Col ${lines.at(-1).length + 1}`;
+function updateCursorPosition(position = { line: 1, column: 1 }) {
+  $("#cursor-position").textContent = `Ln ${position.line}, Col ${position.column}`;
+}
+
+function renderProjectSwitcher() {
+  const select = $("#project-switcher");
+  if (!select) return;
+  const projects = getLocalProjects();
+  if (!projects.some((item) => item.id === project.id)) projects.unshift(project);
+  select.replaceChildren();
+  for (const item of projects.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.name;
+    option.selected = item.id === project.id;
+    select.append(option);
+  }
 }
 
 function renderFileList(filter = "") {
@@ -207,8 +245,9 @@ function selectFile(id) {
 function loadActiveFile() {
   const file = activeFile();
   if (!file) return;
-  editor.value = file.content;
+  codeEditor.setValue(file.content);
   $("#notes-editor").value = file.notes || "";
+  renderComments();
   renderFileList($("#file-search").value);
   updateProjectHeader();
   updateLineNumbers();
@@ -237,7 +276,7 @@ async function addFile() {
   }
   loadActiveFile();
   setDirty();
-  editor.focus();
+  codeEditor.focus();
   toast("New diagram added");
 }
 
@@ -275,7 +314,7 @@ function queueRender(delay = 280) {
 }
 
 async function renderDiagram() {
-  const source = editor.value.trim();
+  const source = codeEditor.getValue().trim();
   const sequence = ++renderSequence;
   const started = performance.now();
   if (!source) {
@@ -293,16 +332,26 @@ async function renderDiagram() {
     result.bindFunctions?.(diagramCanvas);
     renderError.hidden = true;
     diagramCanvas.hidden = false;
+    lastRenderErrorLine = null;
+    codeEditor.setError(null);
     $("#render-time").textContent = `${Math.max(1, Math.round(performance.now() - started))} ms`;
     applyTransform();
   } catch (error) {
     if (sequence !== renderSequence) return;
     diagramCanvas.hidden = true;
     renderError.hidden = false;
-    errorMessage.textContent = friendlyRenderError(error);
+    const message = friendlyRenderError(error);
+    lastRenderErrorLine = extractErrorLine(message);
+    errorMessage.textContent = message;
+    codeEditor.setError(lastRenderErrorLine || 1, message);
     $("#render-time").textContent = "Syntax error";
     document.querySelectorAll("body > [id^='dmermaid-studio'], body > #dmermaid-studio").forEach((node) => node.remove());
   }
+}
+
+function extractErrorLine(message) {
+  const match = String(message).match(/(?:line|at)\s+(\d+)/i) || String(message).match(/^(\d+):\d+/m);
+  return match ? Number(match[1]) : null;
 }
 
 function friendlyRenderError(error) {
@@ -326,9 +375,9 @@ function fitView() {
   applyTransform();
 }
 
-function onEditorInput() {
+function onEditorInput(value) {
   const file = activeFile();
-  file.content = editor.value;
+  file.content = value;
   file.updatedAt = new Date().toISOString();
   updateLineNumbers();
   updateCursorPosition();
@@ -339,7 +388,8 @@ function onEditorInput() {
 }
 
 function quickFixSource() {
-  const fixed = editor.value
+  const current = codeEditor.getValue();
+  const fixed = current
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/→/g, "-->")
@@ -349,26 +399,81 @@ function quickFixSource() {
     .map((line) => line.trimEnd())
     .join("\n")
     .replace(/^\s+|\s+$/g, "");
-  if (fixed === editor.value) {
+  if (fixed === current) {
     toast("No common syntax issues found");
     return;
   }
   createSnapshot("Before quick fix");
-  editor.value = fixed;
-  editor.dispatchEvent(new Event("input", { bubbles: true }));
+  codeEditor.setValue(fixed);
+  onEditorInput(fixed);
   toast("Common punctuation and spacing issues fixed");
 }
 
 function newProject() {
-  if (dirty && !window.confirm("Start a new project? Your current work is only saved in this browser until you save a project file.")) return;
-  project = createProject();
+  try { saveLocalProject(project); } catch { /* Keep moving if storage is unavailable. */ }
+  const count = getLocalProjects().length + 1;
+  project = createProject(`Untitled project ${count}`);
   projectFileHandle = null;
   directoryHandle = null;
   fileHandles = new Map();
   setFolderCard(null);
   loadActiveFile();
   saveLocalNow();
+  applyWorkspaceState();
   toast("New local project ready");
+}
+
+function switchLocalProject(id) {
+  if (!id || id === project.id) return;
+  try { saveLocalNow(); } catch { /* Current edits remain in memory. */ }
+  const next = loadLocalProjectById(id);
+  if (!next) return;
+  project = next;
+  projectFileHandle = null;
+  directoryHandle = null;
+  fileHandles = new Map();
+  setFolderCard(null);
+  loadActiveFile();
+  applyWorkspaceState();
+  toast(`Switched to ${project.name}`);
+}
+
+function duplicateCurrentProject() {
+  const copy = normalizeProject(JSON.parse(serializeProject(project)));
+  copy.id = uid("project");
+  copy.name = `${project.name} copy`;
+  copy.createdAt = new Date().toISOString();
+  copy.updatedAt = copy.createdAt;
+  copy.files = copy.files.map((file) => ({ ...file, id: uid("diagram"), sourcePath: null }));
+  copy.activeFileId = copy.files[0].id;
+  copy.history = [];
+  project = copy;
+  projectFileHandle = null;
+  directoryHandle = null;
+  fileHandles = new Map();
+  setFolderCard(null);
+  loadActiveFile();
+  saveLocalNow();
+  toast("Project duplicated");
+}
+
+function deleteCurrentProject() {
+  const projects = getLocalProjects();
+  if (projects.length <= 1) {
+    toast("Keep at least one local project.", "error");
+    return;
+  }
+  if (!window.confirm(`Delete ${project.name} from this browser? Saved project files are not affected.`)) return;
+  const currentId = project.id;
+  removeLocalProject(currentId);
+  project = getLocalProjects()[0] || createProject();
+  projectFileHandle = null;
+  directoryHandle = null;
+  fileHandles = new Map();
+  setFolderCard(null);
+  loadActiveFile();
+  saveLocalNow();
+  toast("Local project deleted");
 }
 
 async function openProject() {
@@ -552,7 +657,7 @@ function renderTemplates(filter = "") {
 
 function applyTemplate(template) {
   createSnapshot("Before applying a template");
-  editor.value = template.code;
+  codeEditor.setValue(template.code);
   activeFile().content = template.code;
   activeFile().updatedAt = new Date().toISOString();
   templatesModal.close();
@@ -560,8 +665,73 @@ function applyTemplate(template) {
   renderFileList($("#file-search").value);
   setDirty();
   queueRender(0);
-  editor.focus();
+  codeEditor.focus();
   toast(`${template.name} template applied`);
+}
+
+function renderComments() {
+  const list = $("#comment-list");
+  if (!list) return;
+  const comments = activeFile()?.comments || [];
+  list.replaceChildren();
+  if (!comments.length) {
+    const empty = document.createElement("div");
+    empty.className = "comment-empty";
+    empty.textContent = "No comments yet. Start a local review thread.";
+    list.append(empty);
+    return;
+  }
+  for (const comment of comments.slice().reverse()) {
+    const item = document.createElement("article");
+    item.className = `comment-item${comment.resolved ? " resolved" : ""}`;
+    const header = document.createElement("header");
+    const avatar = document.createElement("span");
+    avatar.className = "comment-avatar";
+    avatar.textContent = "YOU";
+    const author = document.createElement("strong");
+    author.textContent = comment.author || "You";
+    const time = document.createElement("time");
+    time.dateTime = comment.createdAt;
+    time.textContent = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(comment.createdAt));
+    header.append(avatar, author, time);
+    const body = document.createElement("p");
+    body.textContent = comment.text;
+    const actions = document.createElement("div");
+    actions.className = "comment-actions";
+    const resolveButton = document.createElement("button");
+    resolveButton.type = "button";
+    resolveButton.textContent = comment.resolved ? "Reopen" : "Resolve";
+    resolveButton.addEventListener("click", () => {
+      comment.resolved = !comment.resolved;
+      setDirty();
+      renderComments();
+    });
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => {
+      activeFile().comments = activeFile().comments.filter((item) => item.id !== comment.id);
+      setDirty();
+      renderComments();
+    });
+    actions.append(resolveButton, deleteButton);
+    item.append(header, body, actions);
+    list.append(item);
+  }
+}
+
+function addComment() {
+  const input = $("#comment-input");
+  const text = input.value.trim();
+  if (!text) return;
+  const file = activeFile();
+  file.comments ||= [];
+  file.comments.push({ id: uid("comment"), author: "You", text, resolved: false, createdAt: new Date().toISOString() });
+  file.updatedAt = new Date().toISOString();
+  input.value = "";
+  setDirty();
+  renderComments();
+  toast("Comment added locally");
 }
 
 function renderHistory() {
@@ -588,18 +758,51 @@ function renderHistory() {
     const date = document.createElement("small");
     date.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(version.createdAt));
     copy.append(title, date);
+    const actions = document.createElement("div");
+    actions.className = "history-actions";
     const restore = document.createElement("button");
     restore.type = "button";
     restore.textContent = "Restore";
     restore.addEventListener("click", () => restoreVersion(version));
-    row.append(icon, copy, restore);
+    const rename = document.createElement("button");
+    rename.type = "button";
+    rename.textContent = "Label";
+    rename.addEventListener("click", () => {
+      const label = window.prompt("Version label", version.label);
+      if (!label?.trim()) return;
+      version.label = label.trim();
+      saveLocalNow();
+      renderHistory();
+    });
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", () => {
+      project.history = project.history.filter((item) => item.id !== version.id);
+      saveLocalNow();
+      updateHistoryCount();
+      renderHistory();
+    });
+    actions.append(restore, rename, remove);
+    row.append(icon, copy, actions);
     list.append(row);
   }
 }
 
+function clearCurrentHistory() {
+  const fileId = activeFile()?.id;
+  if (!fileId || !project.history.some((item) => item.fileId === fileId)) return;
+  if (!window.confirm("Clear version history for this diagram?")) return;
+  project.history = project.history.filter((item) => item.fileId !== fileId);
+  saveLocalNow();
+  updateHistoryCount();
+  renderHistory();
+  toast("Diagram history cleared");
+}
+
 function restoreVersion(version) {
   createSnapshot("Before restoring a version");
-  editor.value = version.content;
+  codeEditor.setValue(version.content);
   activeFile().content = version.content;
   activeFile().updatedAt = new Date().toISOString();
   historyModal.close();
@@ -638,7 +841,7 @@ async function performExport() {
       scale,
       background,
       filename: activeFile().name,
-      source: editor.value,
+      source: codeEditor.getValue(),
     });
     exportModal.close();
     toast(`${format.toUpperCase()} downloaded`);
@@ -665,7 +868,7 @@ function decodeSource(value) {
 
 async function copyShareLink() {
   const url = new URL(location.href);
-  url.hash = `diagram=${encodeSource(editor.value)}`;
+  url.hash = `diagram=${encodeSource(codeEditor.getValue())}`;
   try {
     await navigator.clipboard.writeText(url.toString());
   } catch {
@@ -717,11 +920,151 @@ function switchPanelTab(name) {
     view.hidden = !selected;
     view.classList.toggle("active", selected);
   });
+  $('[data-workspace-tool="files"]')?.classList.toggle("active", name === "files" && !project.settings.sidebarCollapsed);
+  $('[data-workspace-tool="comments"]')?.classList.toggle("active", name === "notes" && !project.settings.sidebarCollapsed);
 }
 
 function setMobileView(view) {
   workspace.dataset.mobileView = view;
   $$("[data-mobile-view]").forEach((button) => button.classList.toggle("active", button.dataset.mobileView === view));
+}
+
+function applyWorkspaceState() {
+  const sidebarCollapsed = Boolean(project.settings.sidebarCollapsed);
+  const editorCollapsed = Boolean(project.settings.editorCollapsed);
+  workspace.classList.toggle("sidebar-collapsed", sidebarCollapsed);
+  workspace.classList.toggle("editor-collapsed", editorCollapsed);
+  const notesActive = $('[data-panel-view="notes"]')?.classList.contains("active");
+  $('[data-workspace-tool="files"]')?.classList.toggle("active", !sidebarCollapsed && !notesActive);
+  $('[data-workspace-tool="comments"]')?.classList.toggle("active", !sidebarCollapsed && notesActive);
+  $('[data-workspace-tool="editor"]')?.classList.toggle("active", !editorCollapsed);
+  $("#autosave-toggle").setAttribute("aria-pressed", String(Boolean(project.settings.autosave)));
+  $("#autosave-toggle").classList.toggle("autosave-off", !project.settings.autosave);
+}
+
+function toggleSidebar(forceOpen) {
+  project.settings.sidebarCollapsed = typeof forceOpen === "boolean" ? !forceOpen : !project.settings.sidebarCollapsed;
+  applyWorkspaceState();
+  scheduleLocalSave();
+}
+
+function toggleEditor(forceOpen) {
+  project.settings.editorCollapsed = typeof forceOpen === "boolean" ? !forceOpen : !project.settings.editorCollapsed;
+  applyWorkspaceState();
+  scheduleLocalSave();
+  if (!project.settings.editorCollapsed) setTimeout(() => codeEditor.focus(), 190);
+}
+
+function toggleAutosave() {
+  project.settings.autosave = !project.settings.autosave;
+  applyWorkspaceState();
+  if (project.settings.autosave) {
+    scheduleLocalSave();
+    toast("Autosave enabled for browser and connected folder files");
+  } else {
+    clearTimeout(saveTimer);
+    clearTimeout(folderAutosaveTimer);
+    saveState.lastChild.textContent = " Autosave paused";
+    toast("Autosave paused");
+  }
+}
+
+function handleWorkspaceTool(tool) {
+  if (tool === "files") {
+    project.settings.sidebarCollapsed = false;
+    switchPanelTab("files");
+    applyWorkspaceState();
+  } else if (tool === "comments") {
+    project.settings.sidebarCollapsed = false;
+    switchPanelTab("notes");
+    renderComments();
+    applyWorkspaceState();
+  } else if (tool === "editor") {
+    toggleEditor(project.settings.editorCollapsed);
+  } else if (tool === "templates") {
+    renderTemplates();
+    templatesModal.showModal();
+  } else if (tool === "export") {
+    updateExportDialog();
+    exportModal.showModal();
+  } else if (tool === "history") {
+    renderHistory();
+    historyModal.showModal();
+  }
+  scheduleLocalSave();
+}
+
+const COMMANDS = [
+  { icon: "▱", label: "Toggle project sidebar", hint: "Ctrl/Cmd+B", action: () => toggleSidebar() },
+  { icon: "⌘", label: "Toggle code editor", hint: "Ctrl/Cmd+J", action: () => toggleEditor() },
+  { icon: "+", label: "New diagram", hint: "Ctrl/Cmd+N", action: addFile },
+  { icon: "＋", label: "New local project", hint: "", action: newProject },
+  { icon: "↗", label: "Open project file", hint: "Ctrl/Cmd+O", action: openProject },
+  { icon: "↓", label: "Save portable project", hint: "Ctrl/Cmd+S", action: saveProject },
+  { icon: "▦", label: "Choose a template", hint: "", action: () => handleWorkspaceTool("templates") },
+  { icon: "↶", label: "Open version history", hint: "", action: () => handleWorkspaceTool("history") },
+  { icon: "◌", label: "Open comments", hint: "", action: () => handleWorkspaceTool("comments") },
+  { icon: "⊟", label: "Fold all code", hint: "", action: () => codeEditor.foldAll() },
+  { icon: "⊞", label: "Unfold all code", hint: "", action: () => codeEditor.unfoldAll() },
+  { icon: "⌕", label: "Search inside code", hint: "Ctrl/Cmd+F", action: () => codeEditor.openSearch() },
+  { icon: "◇", label: "Quick-fix common syntax", hint: "", action: quickFixSource },
+  { icon: "⛶", label: "Fullscreen diagram", hint: "F11", action: toggleFullscreen },
+  { icon: "☾", label: "Switch color theme", hint: "", action: switchTheme },
+  { icon: "●", label: "Toggle autosave", hint: "", action: toggleAutosave },
+];
+
+let commandIndex = 0;
+
+function openCommandPalette() {
+  commandIndex = 0;
+  $("#command-search").value = "";
+  renderCommandList();
+  commandModal.showModal();
+  setTimeout(() => $("#command-search").focus(), 0);
+}
+
+function renderCommandList(query = "") {
+  const list = $("#command-list");
+  const commands = COMMANDS.filter((command) => command.label.toLowerCase().includes(query.trim().toLowerCase()));
+  commandIndex = Math.min(commandIndex, Math.max(0, commands.length - 1));
+  list.replaceChildren();
+  commands.forEach((command, index) => {
+    const button = document.createElement("button");
+    button.className = `command-item${index === commandIndex ? " active" : ""}`;
+    button.type = "button";
+    button.role = "option";
+    button.setAttribute("aria-selected", String(index === commandIndex));
+    const icon = document.createElement("span");
+    icon.textContent = command.icon;
+    const copy = document.createElement("span");
+    const label = document.createElement("strong");
+    label.textContent = command.label;
+    const detail = document.createElement("small");
+    detail.textContent = "Mermaid Studio command";
+    copy.append(label, detail);
+    const hint = document.createElement("kbd");
+    hint.textContent = command.hint;
+    if (!command.hint) hint.hidden = true;
+    button.append(icon, copy, hint);
+    button.addEventListener("click", () => runCommand(command));
+    list.append(button);
+  });
+  list.dataset.count = String(commands.length);
+}
+
+function runCommand(command) {
+  commandModal.close();
+  command.action();
+}
+
+function selectedCommand() {
+  const query = $("#command-search").value.trim().toLowerCase();
+  return COMMANDS.filter((command) => command.label.toLowerCase().includes(query))[commandIndex];
+}
+
+async function toggleFullscreen() {
+  if (document.fullscreenElement) await document.exitFullscreen();
+  else await previewStage.requestFullscreen();
 }
 
 function createMobileActions() {
@@ -763,19 +1106,6 @@ function toast(message, type = "success") {
 }
 
 function bindEvents() {
-  editor.addEventListener("input", onEditorInput);
-  editor.addEventListener("click", updateCursorPosition);
-  editor.addEventListener("keyup", updateCursorPosition);
-  editor.addEventListener("scroll", () => { lineNumbers.scrollTop = editor.scrollTop; });
-  editor.addEventListener("keydown", (event) => {
-    if (event.key === "Tab") {
-      event.preventDefault();
-      const start = editor.selectionStart;
-      editor.setRangeText("  ", start, editor.selectionEnd, "end");
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-  });
-
   $("#notes-editor").addEventListener("input", (event) => {
     activeFile().notes = event.target.value;
     activeFile().updatedAt = new Date().toISOString();
@@ -783,12 +1113,21 @@ function bindEvents() {
   });
   $("#file-search").addEventListener("input", (event) => renderFileList(event.target.value));
   $("#add-file").addEventListener("click", addFile);
+  $("#add-comment").addEventListener("click", addComment);
+  $("#comment-input").addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") addComment();
+  });
   $("#new-project").addEventListener("click", newProject);
+  $("#new-local-project").addEventListener("click", newProject);
+  $("#duplicate-project").addEventListener("click", duplicateCurrentProject);
+  $("#delete-project").addEventListener("click", deleteCurrentProject);
+  $("#project-switcher").addEventListener("change", (event) => switchLocalProject(event.target.value));
   $("#open-project").addEventListener("click", openProject);
   $("#open-folder").addEventListener("click", () => chooseFolder());
   $("#connect-folder").onclick = () => chooseFolder();
   $("#save-folder").addEventListener("click", saveFolderFiles);
   $("#save-project").addEventListener("click", saveProject);
+  $("#autosave-toggle").addEventListener("click", toggleAutosave);
   $("#rename-project").addEventListener("click", () => {
     const name = window.prompt("Rename project", project.name);
     if (!name?.trim()) return;
@@ -805,22 +1144,34 @@ function bindEvents() {
   });
 
   $("#theme-toggle").addEventListener("click", switchTheme);
-  $("#undo").addEventListener("click", () => { editor.focus(); document.execCommand("undo"); });
-  $("#redo").addEventListener("click", () => { editor.focus(); document.execCommand("redo"); });
+  $("#undo").addEventListener("click", () => codeEditor.undo());
+  $("#redo").addEventListener("click", () => codeEditor.redo());
+  $("#fold-all").addEventListener("click", () => codeEditor.foldAll());
+  $("#unfold-all").addEventListener("click", () => codeEditor.unfoldAll());
   $("#quick-fix").addEventListener("click", quickFixSource);
+  $("#error-quick-fix").addEventListener("click", quickFixSource);
+  $("#go-to-error").addEventListener("click", () => {
+    project.settings.editorCollapsed = false;
+    applyWorkspaceState();
+    codeEditor.revealLine(lastRenderErrorLine || 1);
+  });
   $("#templates-button").addEventListener("click", () => { renderTemplates(); templatesModal.showModal(); });
   $("#template-search").addEventListener("input", (event) => renderTemplates(event.target.value));
   $("#history-button").addEventListener("click", () => { renderHistory(); historyModal.showModal(); });
+  $("#clear-history").addEventListener("click", clearCurrentHistory);
   $("#shortcuts-button").addEventListener("click", () => shortcutsModal.showModal());
   $$("[data-panel-tab]").forEach((tab) => tab.addEventListener("click", () => switchPanelTab(tab.dataset.panelTab)));
+  $$("[data-workspace-tool]").forEach((button) => button.addEventListener("click", () => handleWorkspaceTool(button.dataset.workspaceTool)));
+  $("#collapse-sidebar").addEventListener("click", () => toggleSidebar());
+  $("#collapse-comments").addEventListener("click", () => toggleSidebar());
+  $("#sidebar-toggle").addEventListener("click", () => toggleSidebar());
+  $("#collapse-editor").addEventListener("click", () => toggleEditor());
+  $("#editor-toggle").addEventListener("click", () => toggleEditor());
 
   $("#zoom-in").addEventListener("click", () => setZoom(zoom + 0.15));
   $("#zoom-out").addEventListener("click", () => setZoom(zoom - 0.15));
   $("#fit-view").addEventListener("click", fitView);
-  $("#fullscreen").addEventListener("click", async () => {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await previewStage.requestFullscreen();
-  });
+  $("#fullscreen").addEventListener("click", toggleFullscreen);
   previewStage.addEventListener("wheel", (event) => {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
@@ -844,14 +1195,28 @@ function bindEvents() {
   $("#download-export").addEventListener("click", performExport);
   $("#share-link").addEventListener("click", copyShareLink);
   $$("[data-mobile-view]").forEach((button) => button.addEventListener("click", () => setMobileView(button.dataset.mobileView)));
+  $("#command-button").addEventListener("click", openCommandPalette);
+  $("#command-search").addEventListener("input", (event) => { commandIndex = 0; renderCommandList(event.target.value); });
+  $("#command-search").addEventListener("keydown", (event) => {
+    const count = Number($("#command-list").dataset.count || 0);
+    if (event.key === "ArrowDown") { event.preventDefault(); commandIndex = Math.min(count - 1, commandIndex + 1); renderCommandList(event.target.value); }
+    if (event.key === "ArrowUp") { event.preventDefault(); commandIndex = Math.max(0, commandIndex - 1); renderCommandList(event.target.value); }
+    if (event.key === "Enter") { event.preventDefault(); const command = selectedCommand(); if (command) runCommand(command); }
+  });
+  commandModal.addEventListener("click", (event) => { if (event.target === commandModal) commandModal.close(); });
 
   window.addEventListener("keydown", (event) => {
     const command = event.ctrlKey || event.metaKey;
     if (command && event.key.toLowerCase() === "s") { event.preventDefault(); saveProject(); }
     if (command && event.key.toLowerCase() === "o") { event.preventDefault(); openProject(); }
     if (command && event.key.toLowerCase() === "n") { event.preventDefault(); addFile(); }
-    if (command && event.shiftKey && event.key.toLowerCase() === "e") { event.preventDefault(); updateExportDialog(); exportModal.showModal(); }
-    if (!command && event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
+    if (command && event.key.toLowerCase() === "b") { event.preventDefault(); toggleSidebar(); }
+    if (command && event.key.toLowerCase() === "j") { event.preventDefault(); toggleEditor(); }
+    if (command && event.shiftKey && event.key.toLowerCase() === "p") { event.preventDefault(); openCommandPalette(); }
+    if (command && event.shiftKey && event.key.toLowerCase() === "f") { event.preventDefault(); quickFixSource(); }
+    if (command && event.altKey && event.key.toLowerCase() === "e") { event.preventDefault(); updateExportDialog(); exportModal.showModal(); }
+    if (event.key === "F11") { event.preventDefault(); toggleFullscreen(); }
+    if (!command && event.key === "/" && !codeEditor.view.hasFocus && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
       event.preventDefault();
       $("#file-search").focus();
     }
@@ -867,10 +1232,13 @@ function initialize() {
   $("#theme-toggle").textContent = currentTheme === "dark" ? "☾" : "☀";
   workspace.dataset.mobileView = "code";
   initMermaid();
+  codeEditor = createCodeEditor(editorHost, { value: "", onChange: onEditorInput, onCursor: updateCursorPosition });
   bindEvents();
   createMobileActions();
   setFolderCard(null);
+  try { saveLocalProject(project); } catch { /* The editor still works without browser persistence. */ }
   loadActiveFile();
+  applyWorkspaceState();
   restoreFolderHint();
 }
 

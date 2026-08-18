@@ -5,11 +5,15 @@ Mermaid Studio is a static, privacy-first Mermaid diagram editor. It runs entire
 ## Features
 
 - Live Mermaid rendering with clear syntax errors
+- VS Code-style syntax coloring, autocomplete, bracket matching, search, lint markers, and fold gutters
 - 13 built-in diagram templates
-- Local `.mstudio` project files containing diagrams, notes, and version history
+- A local project library for instantly switching, duplicating, and deleting browser projects
+- Local `.mstudio` project files containing diagrams, comments, notes, and version history
 - Direct folder access for `.mmd`, `.mermaid`, and `.txt` files in supported browsers
-- Browser autosave and up to 30 local snapshots
-- Undo, redo, search, zoom, pan, fit-to-view, fullscreen, light and dark themes
+- Browser and connected-folder autosave, plus up to 100 manageable local snapshots
+- Collapsible files and code panels for a full-page diagram canvas
+- Local comment threads with resolve, reopen, and delete controls
+- Undo, redo, code folding, command palette, zoom, pan, fit-to-view, fullscreen, light and dark themes
 - High-resolution PNG and JPEG export at 1×, 2×, or 4×
 - SVG, PDF, Mermaid source, Markdown, and private URL sharing
 - Responsive desktop, tablet, and mobile interface
@@ -45,3 +49,17 @@ Direct read/write folder access uses the File System Access API. It works on Git
 ## Privacy
 
 Diagram source, notes, and version history remain in browser storage or in files the user explicitly opens. There is no account system, analytics, or backend service.
+
+## Keyboard shortcuts
+
+Shortcuts use `Cmd` on macOS and `Ctrl` on Windows/Linux.
+
+- `Cmd/Ctrl + S`: save portable project
+- `Cmd/Ctrl + O`: open a project
+- `Cmd/Ctrl + N`: add a diagram
+- `Cmd/Ctrl + B`: toggle the project sidebar
+- `Cmd/Ctrl + J`: toggle the code editor
+- `Cmd/Ctrl + F`: search inside code
+- `Cmd/Ctrl + /`: toggle Mermaid line comments
+- `Cmd/Ctrl + Shift + P`: command palette
+- `F11`: fullscreen diagram

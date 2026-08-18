@@ -59,6 +59,7 @@
         <a class="brand" href="./" aria-label="Mermaid Studio home">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
           <span>Mermaid <b>Studio</b></span>
+          <span class="live-badge">Live editor</span>
         </a>
 
         <div class="document-meta">
@@ -73,6 +74,7 @@
           <button class="button ghost compact" id="new-project" type="button"><span aria-hidden="true">＋</span> New</button>
           <button class="button ghost compact" id="open-project" type="button"><span aria-hidden="true">↗</span> Open</button>
           <button class="button ghost compact folder-action" id="open-folder" type="button"><span aria-hidden="true">▰</span> Folder</button>
+          <button class="button ghost compact" id="autosave-toggle" type="button" aria-pressed="true"><span aria-hidden="true">●</span> Autosave</button>
           <button class="button primary compact" id="save-project" type="button"><span aria-hidden="true">↓</span> Save project</button>
           <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">☾</button>
           <button class="icon-button mobile-menu-button" id="mobile-menu" type="button" aria-label="Open project menu">•••</button>
@@ -80,6 +82,16 @@
       </header>
 
       <main class="workspace">
+        <nav class="activity-bar" aria-label="Workspace tools">
+          <button class="activity-button active" type="button" data-workspace-tool="files" aria-label="Projects and files" title="Projects and files (Ctrl/Cmd+B)"><span aria-hidden="true">▱</span><small>Files</small></button>
+          <button class="activity-button active" type="button" data-workspace-tool="editor" aria-label="Code editor" title="Code editor (Ctrl/Cmd+J)"><span aria-hidden="true">⌘</span><small>Code</small></button>
+          <button class="activity-button" type="button" data-workspace-tool="templates" aria-label="Templates" title="Templates"><span aria-hidden="true">▦</span><small>Templates</small></button>
+          <button class="activity-button" type="button" data-workspace-tool="export" aria-label="Export diagram" title="Export diagram"><span aria-hidden="true">↗</span><small>Export</small></button>
+          <button class="activity-button" type="button" data-workspace-tool="history" aria-label="Version history" title="Version history"><span aria-hidden="true">↶</span><small>History</small></button>
+          <button class="activity-button" type="button" data-workspace-tool="comments" aria-label="Comments" title="Comments"><span aria-hidden="true">◌</span><small>Comments</small></button>
+          <span class="activity-spacer"></span>
+          <button class="activity-button" id="command-button" type="button" aria-label="Command palette" title="Command palette (Ctrl/Cmd+Shift+P)"><span aria-hidden="true">›_</span><small>Commands</small></button>
+        </nav>
         <aside class="project-panel" id="project-panel" aria-label="Project explorer">
           <div class="panel-tabs" role="tablist" aria-label="Project panel">
             <button class="panel-tab active" type="button" role="tab" aria-selected="true" data-panel-tab="files">Files</button>
@@ -92,7 +104,19 @@
                 <span class="eyebrow">Workspace</span>
                 <h2 id="folder-name">Local project</h2>
               </div>
-              <button class="icon-button small" id="add-file" type="button" aria-label="Add diagram" title="Add diagram">＋</button>
+              <div class="panel-heading-actions">
+                <button class="icon-button small" id="add-file" type="button" aria-label="Add diagram" title="Add diagram">＋</button>
+                <button class="icon-button small" id="collapse-sidebar" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">‹</button>
+              </div>
+            </div>
+            <div class="project-switcher-wrap">
+              <label for="project-switcher">Projects</label>
+              <select id="project-switcher" aria-label="Switch local project"></select>
+              <div class="project-switcher-actions">
+                <button type="button" id="new-local-project">New</button>
+                <button type="button" id="duplicate-project">Duplicate</button>
+                <button type="button" id="delete-project">Delete</button>
+              </div>
             </div>
             <label class="search-field">
               <span aria-hidden="true">⌕</span>
@@ -117,12 +141,19 @@
           <section class="panel-view notes-view" data-panel-view="notes" hidden>
             <div class="panel-heading">
               <div>
-                <span class="eyebrow">Private notes</span>
-                <h2>Diagram notes</h2>
+                <span class="eyebrow">Local review</span>
+                <h2>Comments</h2>
               </div>
+              <button class="icon-button small" id="collapse-comments" type="button" aria-label="Collapse comments" title="Collapse sidebar">‹</button>
             </div>
-            <p class="panel-help">Keep context, review notes, or handoff details with this diagram. Notes are stored inside the project file.</p>
-            <textarea id="notes-editor" placeholder="Add a note for this diagram…" aria-label="Diagram notes"></textarea>
+            <p class="panel-help">Review threads and notes stay inside this project file and never leave your device.</p>
+            <div class="comment-composer">
+              <textarea id="comment-input" placeholder="Write a comment…" aria-label="New comment"></textarea>
+              <button class="button primary compact" id="add-comment" type="button">Add comment</button>
+            </div>
+            <div class="comment-list" id="comment-list"></div>
+            <label class="notes-label" for="notes-editor">Working notes</label>
+            <textarea id="notes-editor" placeholder="Private notes for this diagram…" aria-label="Diagram notes"></textarea>
             <div class="privacy-note"><span aria-hidden="true">●</span> Never uploaded</div>
           </section>
 
@@ -142,15 +173,15 @@
             <div class="pane-tools">
               <button class="tool-button" id="undo" type="button" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo">↶</button>
               <button class="tool-button" id="redo" type="button" title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo">↷</button>
+              <button class="tool-button" id="fold-all" type="button" title="Fold all code" aria-label="Fold all code">⊟</button>
+              <button class="tool-button" id="unfold-all" type="button" title="Unfold all code" aria-label="Unfold all code">⊞</button>
               <span class="tool-divider"></span>
               <button class="button ghost compact" id="quick-fix" type="button" title="Normalize common syntax issues">Quick fix</button>
               <button class="button soft compact" id="templates-button" type="button">Templates</button>
+              <button class="tool-button" id="collapse-editor" type="button" title="Collapse code editor (Ctrl/Cmd+J)" aria-label="Collapse code editor">›</button>
             </div>
           </header>
-          <div class="editor-wrap">
-            <pre class="line-numbers" id="line-numbers" aria-hidden="true">1</pre>
-            <textarea id="editor" aria-label="Mermaid code editor" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
-          </div>
+          <div class="editor-wrap" id="editor" aria-label="Mermaid code editor"></div>
           <footer class="editor-status">
             <span id="cursor-position">Ln 1, Col 1</span>
             <span id="character-count">0 characters</span>
@@ -165,6 +196,9 @@
               <span class="render-time" id="render-time">Ready</span>
             </div>
             <div class="pane-tools">
+              <button class="tool-button" id="sidebar-toggle" type="button" title="Toggle sidebar (Ctrl/Cmd+B)" aria-label="Toggle sidebar">▱</button>
+              <button class="tool-button" id="editor-toggle" type="button" title="Toggle code editor (Ctrl/Cmd+J)" aria-label="Toggle code editor">⌘</button>
+              <span class="tool-divider"></span>
               <button class="tool-button" id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">−</button>
               <span class="zoom-value" id="zoom-value">100%</span>
               <button class="tool-button" id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">＋</button>
@@ -177,7 +211,7 @@
             <div class="diagram-canvas" id="diagram-canvas" role="img" aria-label="Rendered Mermaid diagram"></div>
             <div class="render-error" id="render-error" role="alert" hidden>
               <div class="error-icon" aria-hidden="true">!</div>
-              <div><strong>Diagram could not render</strong><p id="error-message"></p></div>
+              <div><strong>Diagram could not render</strong><p id="error-message"></p><div class="error-actions"><button type="button" id="go-to-error">Go to error</button><button type="button" id="error-quick-fix">Try quick fix</button></div></div>
             </div>
           </div>
           <footer class="preview-footer">
@@ -257,7 +291,7 @@
       <form method="dialog" class="modal-shell compact-shell">
         <header class="modal-header">
           <div><span class="eyebrow">Local snapshots</span><h2>Version history</h2><p>Restore an earlier edit from this browser.</p></div>
-          <button class="icon-button close-modal" type="submit" value="cancel" aria-label="Close history">×</button>
+          <div class="modal-header-actions"><button class="button ghost compact" id="clear-history" type="button">Clear history</button><button class="icon-button close-modal" type="submit" value="cancel" aria-label="Close history">×</button></div>
         </header>
         <div class="history-list" id="history-list"></div>
       </form>
@@ -271,10 +305,24 @@
           <div><span>Open project</span><kbd>Ctrl / ⌘</kbd><kbd>O</kbd></div>
           <div><span>New diagram</span><kbd>Ctrl / ⌘</kbd><kbd>N</kbd></div>
           <div><span>Undo / Redo</span><kbd>Ctrl / ⌘</kbd><kbd>Z</kbd></div>
+          <div><span>Search inside code</span><kbd>Ctrl / ⌘</kbd><kbd>F</kbd></div>
+          <div><span>Toggle line comment</span><kbd>Ctrl / ⌘</kbd><kbd>/</kbd></div>
+          <div><span>Toggle project sidebar</span><kbd>Ctrl / ⌘</kbd><kbd>B</kbd></div>
+          <div><span>Toggle code editor</span><kbd>Ctrl / ⌘</kbd><kbd>J</kbd></div>
+          <div><span>Command palette</span><kbd>Ctrl / ⌘</kbd><kbd>Shift</kbd><kbd>P</kbd></div>
+          <div><span>Fullscreen preview</span><kbd>F11</kbd></div>
           <div><span>Find a diagram</span><kbd>/</kbd></div>
           <div><span>Close dialog</span><kbd>Esc</kbd></div>
         </div>
       </form>
+    </dialog>
+
+    <dialog class="modal command-modal" id="command-modal">
+      <div class="command-shell">
+        <label class="command-search"><span aria-hidden="true">›_</span><input id="command-search" type="search" placeholder="Type a command…" autocomplete="off" /></label>
+        <div class="command-list" id="command-list" role="listbox" aria-label="Commands"></div>
+        <footer><span>↑↓ navigate</span><span>Enter run</span><span>Esc close</span></footer>
+      </div>
     </dialog>
 
     <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
