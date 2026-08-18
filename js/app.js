@@ -149,7 +149,7 @@ function updateHistoryCount() {
 function updateProjectHeader() {
   $("#project-title").textContent = project.name;
   $("#folder-name").textContent = directoryHandle?.name || project.name;
-  document.title = `${activeFile()?.name || project.name} — Mermaid Studio`;
+  document.title = `${activeFile()?.name || project.name} — Free Mermaid Editor | Mermaid Studio`;
   renderProjectSwitcher();
 }
 
