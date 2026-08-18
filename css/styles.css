@@ -834,18 +834,19 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
-  min-height: 80px;
+  min-width: 1px;
+  min-height: 1px;
   transform: translate(-50%, -50%);
   transform-origin: center;
   transition: opacity 120ms ease;
-  will-change: transform;
 }
 
 .diagram-canvas svg {
   display: block;
-  max-width: min(780px, calc(100vw - 50px));
-  max-height: calc(100vh - 170px);
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
   filter: drop-shadow(0 22px 28px rgba(0, 0, 0, 0.18));
 }
 

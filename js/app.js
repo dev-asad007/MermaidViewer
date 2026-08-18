@@ -60,6 +60,7 @@ let lastRenderErrorLine = null;
 let folderAutosaveTimer = null;
 let exportObjectUrl = null;
 let exportPrepareSequence = 0;
+let previewResizeFrame = null;
 
 function activeFile() {
   return project.files.find((file) => file.id === project.activeFileId) || project.files[0];
@@ -362,12 +363,28 @@ function friendlyRenderError(error) {
 }
 
 function applyTransform() {
-  diagramCanvas.style.transform = `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`;
+  const svg = diagramCanvas.querySelector("svg");
+  if (svg) {
+    const viewBox = svg.getAttribute("viewBox")?.trim().split(/[ ,]+/).map(Number);
+    const intrinsicWidth = viewBox?.length === 4 && viewBox.every(Number.isFinite) ? Math.max(1, viewBox[2]) : Math.max(1, svg.getBoundingClientRect().width);
+    const intrinsicHeight = viewBox?.length === 4 && viewBox.every(Number.isFinite) ? Math.max(1, viewBox[3]) : Math.max(1, svg.getBoundingClientRect().height);
+    const availableWidth = Math.max(120, previewStage.clientWidth - 64);
+    const availableHeight = Math.max(100, previewStage.clientHeight - 64);
+    const fitScale = Math.min(availableWidth / intrinsicWidth, availableHeight / intrinsicHeight);
+
+    // Give the SVG a real display size at every level instead of scaling a
+    // small composited layer. Text and lines therefore stay vector sharp.
+    diagramCanvas.style.width = `${Math.max(1, intrinsicWidth * fitScale * zoom)}px`;
+    diagramCanvas.style.height = `${Math.max(1, intrinsicHeight * fitScale * zoom)}px`;
+  }
+  diagramCanvas.style.transform = `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px))`;
   $("#zoom-value").textContent = `${Math.round(zoom * 100)}%`;
+  $("#zoom-out").disabled = zoom <= 0.5;
+  $("#zoom-in").disabled = zoom >= 3;
 }
 
 function setZoom(next) {
-  zoom = Math.min(3, Math.max(0.3, next));
+  zoom = Math.min(3, Math.max(0.5, next));
   applyTransform();
 }
 
@@ -821,7 +838,7 @@ function updateExportDialog() {
   $("#quality-fieldset").hidden = ["svg", "mmd", "md"].includes(format);
   $("#background-field").hidden = ["mmd", "md"].includes(format);
   const extension = format === "jpeg" ? "jpg" : format;
-  $("#export-filename").textContent = `${safeBaseName(activeFile().name)}.${extension}`;
+  $("#export-filename").textContent = `${safeBaseName(project.name)}.${extension}`;
   $("#export-quality").textContent = ["svg", "mmd", "md"].includes(format) ? (format === "svg" ? "Vector" : "Source") : `${scale}× resolution`;
   $("#resolution-hint").textContent = scale === 4 ? "Ultra quality · suitable for print" : scale === 2 ? "High quality · ideal for presentations and reports" : "Standard quality · fastest download";
   copySvgInto(diagramCanvas, $("#export-preview"));
@@ -849,7 +866,7 @@ async function prepareExportDownload() {
       format,
       scale,
       background,
-      filename: activeFile().name,
+      filename: project.name,
       source: codeEditor.getValue(),
     });
 
@@ -1169,7 +1186,9 @@ function bindEvents() {
     if (!name?.trim()) return;
     project.name = name.trim();
     updateProjectHeader();
+    renderProjectSwitcher();
     setDirty();
+    toast(`Project renamed to ${project.name}. Downloads will use this name.`);
   });
   projectInput.addEventListener("change", async () => {
     const file = projectInput.files?.[0];
@@ -1225,6 +1244,10 @@ function bindEvents() {
     applyTransform();
   });
   previewStage.addEventListener("pointerup", () => { dragStart = null; });
+  new ResizeObserver(() => {
+    cancelAnimationFrame(previewResizeFrame);
+    previewResizeFrame = requestAnimationFrame(applyTransform);
+  }).observe(previewStage);
 
   $("#export-button").addEventListener("click", openExportDialog);
   $$('input[name="format"], input[name="scale"], #export-background').forEach((control) => control.addEventListener("change", updateExportDialog));
