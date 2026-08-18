@@ -184,6 +184,7 @@ button:disabled {
   font-weight: 500;
   letter-spacing: -0.02em;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .brand b {
@@ -448,6 +449,7 @@ button:disabled {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .panel-tab.active { color: var(--text); }
@@ -499,7 +501,7 @@ button:disabled {
   align-items: center;
   gap: 4px;
 }
-.add-diagram-button { min-height: 32px; padding-inline: 9px; font-size: 11px; white-space: nowrap; }
+.add-diagram-button { width: 100%; min-height: 34px; margin-bottom: 10px; padding-inline: 9px; font-size: 11px; white-space: nowrap; }
 .sidebar-intro { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
 .project-switcher-wrap {
@@ -760,7 +762,7 @@ kbd {
 }
 .pane-title { gap: 8px; }
 .pane-tools { gap: 2px; }
-.pane-title h2 { margin: 0; font-size: 11px; letter-spacing: 0.01em; }
+.pane-title h2 { margin: 0; font-size: 11px; letter-spacing: 0.01em; white-space: nowrap; }
 .status-dot.coral { background: var(--coral); box-shadow: 0 0 0 4px var(--coral-soft); }
 .status-dot.mint { background: var(--mint); box-shadow: 0 0 0 4px var(--mint-soft); }
 .file-type,
