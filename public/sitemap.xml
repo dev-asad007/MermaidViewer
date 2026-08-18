@@ -1,9 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://dev-asad007.github.io/MermaidViewer/</loc>
     <lastmod>2026-08-18</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://dev-asad007.github.io/MermaidViewer/assets/og.png</image:loc>
+      <image:title>Mermaid Studio free diagram editor</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://dev-asad007.github.io/MermaidViewer/guide.html</loc>
+    <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://dev-asad007.github.io/MermaidViewer/examples.html</loc>
+    <lastmod>2026-08-18</lastmod>
+  </url>
+  <url>
+    <loc>https://dev-asad007.github.io/MermaidViewer/privacy.html</loc>
+    <lastmod>2026-08-18</lastmod>
   </url>
 </urlset>

@@ -1072,6 +1072,7 @@ function createMobileActions() {
   menu.className = "mobile-actions";
   menu.hidden = true;
   const actions = [
+    ["Guide & examples", () => { location.href = "./guide.html"; }],
     ["New project", newProject],
     ["Open project", openProject],
     ["Open folder", () => chooseFolder()],

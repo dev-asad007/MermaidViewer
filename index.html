@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Free Mermaid Editor &amp; Viewer Online | Mermaid Studio</title>
     <meta name="description" content="Create, preview, organize, and export Mermaid diagrams for free. No login or AI: edit locally, open folders, keep version history, and download PNG, JPEG, SVG, PDF, or Mermaid files." />
-    <meta name="keywords" content="free Mermaid editor, Mermaid viewer online, Mermaid live editor, Mermaid diagram editor, flowchart maker, sequence diagram maker, Mermaid to PNG, Mermaid to PDF, Mermaid SVG export, no login diagram editor" />
     <meta name="author" content="Mermaid Studio" />
     <meta name="creator" content="Mermaid Studio" />
     <meta name="publisher" content="Mermaid Studio" />
@@ -64,6 +63,7 @@
             "operatingSystem": "Windows, macOS, Linux, ChromeOS, Android, iOS",
             "browserRequirements": "Requires a modern browser with JavaScript enabled",
             "description": "A free, private browser-based Mermaid diagram editor with live preview, local projects, folder access, version history, comments, and high-resolution export.",
+            "publisher": { "@id": "https://dev-asad007.github.io/MermaidViewer/#organization" },
             "isAccessibleForFree": true,
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock" },
             "featureList": [
@@ -82,10 +82,25 @@
             "@type": "WebSite",
             "@id": "https://dev-asad007.github.io/MermaidViewer/#website",
             "name": "Mermaid Studio",
+            "alternateName": "Free Mermaid Editor",
             "url": "https://dev-asad007.github.io/MermaidViewer/",
             "description": "Free online Mermaid editor and viewer with private local storage and high-quality export.",
+            "publisher": { "@id": "https://dev-asad007.github.io/MermaidViewer/#organization" },
             "inLanguage": "en",
             "isAccessibleForFree": true
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://dev-asad007.github.io/MermaidViewer/#organization",
+            "name": "Mermaid Studio",
+            "url": "https://dev-asad007.github.io/MermaidViewer/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://dev-asad007.github.io/MermaidViewer/assets/favicon.png",
+              "width": 512,
+              "height": 512
+            },
+            "sameAs": ["https://github.com/dev-asad007/MermaidViewer"]
           }
         ]
       }
@@ -94,10 +109,7 @@
   </head>
   <body>
     <a class="skip-link" href="#editor">Skip to editor</a>
-    <section class="sr-only" aria-label="About Mermaid Studio">
-      <h1>Free Mermaid diagram editor and viewer</h1>
-      <p>Create flowcharts, sequence diagrams, class diagrams, and more in a private browser workspace. Mermaid Studio is free, requires no login or AI, saves projects locally, and exports PNG, JPEG, SVG, PDF, and Mermaid source files.</p>
-    </section>
+    <h1 class="sr-only">Free Mermaid diagram editor and viewer</h1>
     <div class="app-shell">
       <header class="topbar">
         <a class="brand" href="./" aria-label="Mermaid Studio home">
@@ -115,6 +127,7 @@
         </div>
 
         <nav class="header-actions" aria-label="Project actions">
+          <a class="button ghost compact guide-action" href="./guide.html"><span aria-hidden="true">?</span> Guide</a>
           <button class="button ghost compact" id="new-project" type="button"><span aria-hidden="true">＋</span> New</button>
           <button class="button ghost compact" id="open-project" type="button"><span aria-hidden="true">↗</span> Open</button>
           <button class="button ghost compact folder-action" id="open-folder" type="button"><span aria-hidden="true">▰</span> Folder</button>

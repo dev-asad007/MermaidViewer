@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A private, browser-based Mermaid diagram editor with local projects and high-resolution exports.",
+  "description": "A free, private Mermaid diagram editor and viewer with local projects, live preview, version history, and high-resolution exports.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",

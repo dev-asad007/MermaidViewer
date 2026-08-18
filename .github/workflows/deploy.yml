@@ -38,3 +38,10 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Notify IndexNow about updated pages
+        continue-on-error: true
+        run: |
+          curl --fail-with-body --retry 3 \
+            --header "Content-Type: application/json; charset=utf-8" \
+            --data '{"host":"dev-asad007.github.io","key":"a17f0e4c9b2d6f813e5a7c4d0b9e2f68","keyLocation":"https://dev-asad007.github.io/MermaidViewer/a17f0e4c9b2d6f813e5a7c4d0b9e2f68.txt","urlList":["https://dev-asad007.github.io/MermaidViewer/","https://dev-asad007.github.io/MermaidViewer/guide.html","https://dev-asad007.github.io/MermaidViewer/examples.html","https://dev-asad007.github.io/MermaidViewer/privacy.html"]}' \
+            https://api.indexnow.org/indexnow

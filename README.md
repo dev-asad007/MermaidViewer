@@ -18,6 +18,8 @@ Mermaid Studio is a static, privacy-first Mermaid diagram editor. It runs entire
 - SVG, PDF, Mermaid source, Markdown, and private URL sharing
 - Responsive desktop, tablet, and mobile interface
 - SEO, Open Graph, X card, JSON-LD, sitemap, robots, manifest, and GitHub Pages workflow
+- Crawlable guide, Mermaid examples, and privacy pages with unique titles, descriptions, canonical URLs, and structured data
+- Automatic IndexNow notifications after successful GitHub Pages deployments
 
 ## Run locally
 
@@ -41,6 +43,12 @@ The finished static site is written to `dist/`.
 3. Push a commit to `main`; the included workflow builds and publishes the site.
 
 The included metadata is configured for `https://dev-asad007.github.io/MermaidViewer/`. Update the URL in `index.html`, `public/robots.txt`, and `public/sitemap.xml` if the repository name or domain changes.
+
+## Search indexing
+
+The production site publishes four canonical, internally linked pages: the editor, product guide, Mermaid examples, and privacy policy. The sitemap lists every page and the deployment workflow notifies IndexNow after publishing.
+
+Google does not provide an anonymous indexing API for general webpages. To request Google indexing and monitor results, verify the GitHub Pages URL in Google Search Console, submit `https://dev-asad007.github.io/MermaidViewer/sitemap.xml`, and inspect the canonical editor URL. Search inclusion and ranking are controlled by each search engine and are not guaranteed by metadata alone.
 
 ## Local folder support
 

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to Use the Free Mermaid Editor | Mermaid Studio Guide</title>
+    <meta name="description" content="Learn how to create, preview, save, organize, and export Mermaid diagrams with Mermaid Studio. Includes local projects, folder access, shortcuts, history, and privacy guidance." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="author" content="Mermaid Studio" />
+    <meta name="theme-color" content="#090d14" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f6fa" media="(prefers-color-scheme: light)" />
+    <link rel="canonical" href="https://dev-asad007.github.io/MermaidViewer/guide.html" />
+    <link rel="icon" href="./assets/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./assets/favicon.png" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Mermaid Studio" />
+    <meta property="og:title" content="How to Use the Free Mermaid Editor | Mermaid Studio" />
+    <meta property="og:description" content="A practical guide to building and exporting Mermaid diagrams privately in your browser." />
+    <meta property="og:url" content="https://dev-asad007.github.io/MermaidViewer/guide.html" />
+    <meta property="og:image" content="https://dev-asad007.github.io/MermaidViewer/assets/og.png" />
+    <meta property="og:image:alt" content="Mermaid Studio free diagram editor" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="How to Use the Free Mermaid Editor | Mermaid Studio" />
+    <meta name="twitter:description" content="Create, organize, and export Mermaid diagrams without an account or backend." />
+    <meta name="twitter:image" content="https://dev-asad007.github.io/MermaidViewer/assets/og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "TechArticle",
+            "@id": "https://dev-asad007.github.io/MermaidViewer/guide.html#article",
+            "headline": "How to Use the Free Mermaid Editor",
+            "description": "A practical guide to creating, saving, organizing, and exporting Mermaid diagrams with Mermaid Studio.",
+            "image": "https://dev-asad007.github.io/MermaidViewer/assets/og.png",
+            "datePublished": "2026-08-18",
+            "dateModified": "2026-08-18",
+            "author": { "@type": "Organization", "name": "Mermaid Studio" },
+            "publisher": { "@type": "Organization", "name": "Mermaid Studio" },
+            "mainEntityOfPage": "https://dev-asad007.github.io/MermaidViewer/guide.html",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Mermaid Studio", "item": "https://dev-asad007.github.io/MermaidViewer/" },
+              { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://dev-asad007.github.io/MermaidViewer/guide.html" }
+            ]
+          }
+        ]
+      }
+    </script>
+    <link rel="stylesheet" href="./css/content.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to guide</a>
+    <header class="site-header">
+      <div class="nav-shell">
+        <a class="site-brand" href="./" aria-label="Mermaid Studio editor">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          Mermaid Studio
+        </a>
+        <nav class="site-nav" aria-label="Information pages">
+          <a href="./guide.html" aria-current="page">Guide</a>
+          <a href="./examples.html">Examples</a>
+          <a href="./privacy.html">Privacy</a>
+        </nav>
+        <a class="cta" href="./">Open free editor <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+
+    <main id="content">
+      <section class="page-hero">
+        <span class="eyebrow">Complete product guide</span>
+        <h1>Create Mermaid diagrams for free, directly in your browser</h1>
+        <p class="page-intro">Mermaid Studio turns plain-text Mermaid syntax into diagrams as you type. It requires no account, sends no diagram data to a backend, and gives you local projects, version history, comments, folder access, and high-quality exports.</p>
+        <div class="hero-actions">
+          <a class="cta" href="./">Start a diagram</a>
+          <a class="secondary-cta" href="./examples.html">Browse Mermaid examples</a>
+        </div>
+      </section>
+
+      <div class="content-shell">
+        <section class="content-section" aria-labelledby="quick-start">
+          <h2 id="quick-start">Quick start</h2>
+          <p>You can create a useful diagram in less than a minute. Everything below happens on your device.</p>
+          <div class="card-grid">
+            <article class="step-card"><b>1</b><h3>Write Mermaid syntax</h3><p>Type in the colorful editor or choose one of the built-in templates for flowcharts, sequences, classes, states, ER models, and more.</p></article>
+            <article class="step-card"><b>2</b><h3>Review the live preview</h3><p>The preview updates automatically. Zoom, pan, fit the canvas, or collapse both side panels to inspect the diagram full screen.</p></article>
+            <article class="step-card"><b>3</b><h3>Save or export</h3><p>Download a portable project, save Mermaid source files, or export PNG, JPEG, SVG, PDF, and Markdown for documents and sharing.</p></article>
+          </div>
+        </section>
+
+        <article class="prose">
+          <h2>What is a Mermaid diagram?</h2>
+          <p>Mermaid is a text-based diagram syntax. Instead of dragging boxes around a canvas, you describe nodes and relationships in plain text. The same source can live next to your code, documentation, or project notes, which makes diagrams easier to review and update.</p>
+          <p>A basic left-to-right flowchart looks like this:</p>
+          <pre class="code-block"><code>flowchart LR
+  idea[Idea] --&gt; review{Ready?}
+  review --&gt;|Yes| build[Build]
+  review --&gt;|No| revise[Revise]
+  revise --&gt; review
+  build --&gt; ship[Ship]</code></pre>
+          <p>Open the <a href="./examples.html">Mermaid examples collection</a> for copy-ready flowchart, sequence, class, state, entity relationship, and Gantt examples.</p>
+
+          <h2>Use the code editor</h2>
+          <p>The editor provides line numbers, syntax colors, bracket matching, autocomplete, folding, search, lint markers, undo, and redo. Mermaid keywords, arrows, labels, values, and comments use separate colors in both light and dark modes.</p>
+          <ul>
+            <li>Press <code>Ctrl/Cmd + F</code> to search inside the source.</li>
+            <li>Press <code>Ctrl/Cmd + /</code> to comment or uncomment selected Mermaid lines.</li>
+            <li>Use the fold gutter or Fold all button to hide long sections and subgraphs.</li>
+            <li>Choose Quick fix to normalize common copied-text and arrow problems.</li>
+          </ul>
+          <div class="notice"><strong>Your source stays private.</strong><p>Mermaid Studio renders with JavaScript in the current browser tab. It does not send diagram text to an application server.</p></div>
+
+          <h2>Manage multiple local projects</h2>
+          <p>The Projects selector keeps up to 20 browser projects available for quick switching. A project can contain multiple diagrams, working notes, review comments, settings, and history. Use New to create a clean workspace, Duplicate to branch an existing project, or Delete to remove a browser copy.</p>
+          <p>Browser storage is convenient but should not be your only backup. Use Save project regularly to download a portable <code>.mstudio</code> file. Opening that file later restores its diagrams and project information.</p>
+
+          <h2>Open and save a local folder</h2>
+          <p>On Chromium-based browsers over HTTPS, Choose folder can read supported Mermaid files from a folder you select. The app only receives access after the browser asks for your permission. Connected source files can be saved back to that folder when autosave is enabled.</p>
+          <p>Folder support recognizes <code>.mmd</code>, <code>.mermaid</code>, and <code>.txt</code> source files. If your browser does not support direct folder access, the portable project and download features still work.</p>
+
+          <h2>Autosave and version history</h2>
+          <p>Autosave stores the active project in browser storage after an edit. Mermaid Studio also keeps local snapshots so you can restore an earlier version, label an important checkpoint, delete a single snapshot, or clear the current diagram’s history. History is local to the browser unless included in a portable project file.</p>
+
+          <h2>Comments and working notes</h2>
+          <p>The Comments panel supports lightweight review threads for each diagram. Add a comment, resolve it when work is complete, reopen it later, or delete it. Working notes are useful for decisions, follow-up items, and context that should travel with the project file.</p>
+
+          <h2>Export a Mermaid diagram</h2>
+          <p>Choose Export, select a format, and set the background and scale. The formats serve different needs:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Format</th><th>Best for</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>PNG</td><td>Presentations, chat, documentation</td><td>Choose 2× or 4× for sharper high-resolution output.</td></tr>
+                <tr><td>JPEG</td><td>Smaller image files</td><td>Uses a solid background and lossy compression.</td></tr>
+                <tr><td>SVG</td><td>Websites and design tools</td><td>Vector output stays sharp at any size.</td></tr>
+                <tr><td>PDF</td><td>Documents, printing, forwarding</td><td>Convenient for sharing a fixed page.</td></tr>
+                <tr><td>Mermaid</td><td>Source control and future editing</td><td>Saves the plain-text diagram source.</td></tr>
+                <tr><td>Markdown</td><td>README files and technical docs</td><td>Wraps the source in a Mermaid code fence.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Keyboard shortcuts</h2>
+          <p>Use <code>Cmd</code> on macOS and <code>Ctrl</code> on Windows or Linux.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+              <tbody>
+                <tr><td>Save portable project</td><td><code>Ctrl/Cmd + S</code></td></tr>
+                <tr><td>Open a project</td><td><code>Ctrl/Cmd + O</code></td></tr>
+                <tr><td>Add a diagram</td><td><code>Ctrl/Cmd + N</code></td></tr>
+                <tr><td>Toggle project sidebar</td><td><code>Ctrl/Cmd + B</code></td></tr>
+                <tr><td>Toggle code editor</td><td><code>Ctrl/Cmd + J</code></td></tr>
+                <tr><td>Open command palette</td><td><code>Ctrl/Cmd + Shift + P</code></td></tr>
+                <tr><td>Fullscreen preview</td><td><code>F11</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2>Frequently asked questions</h2>
+          <div class="faq">
+            <details><summary>Is Mermaid Studio free?</summary><p>Yes. The editor is free to use in the browser and has no login, subscription, or paid feature gate.</p></details>
+            <details><summary>Does the editor use AI?</summary><p>No. Mermaid Studio is a direct syntax editor and renderer. It does not include an AI mode or send prompts to an AI service.</p></details>
+            <details><summary>Where are projects stored?</summary><p>Autosaved projects are stored in your browser. Portable project files and exports are saved to locations you choose on your computer.</p></details>
+            <details><summary>Can I use it on Windows, macOS, and Linux?</summary><p>Yes. The core editor and downloads work in modern browsers on all three platforms. Direct folder access depends on browser support.</p></details>
+            <details><summary>Can I use exported diagrams commercially?</summary><p>The app does not add a watermark or usage restriction to your exports. You remain responsible for the content and any third-party material you include.</p></details>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div><strong>Mermaid Studio</strong><p>Free, local-first diagramming with no account or backend.</p></div>
+        <nav class="footer-links" aria-label="Footer links"><a href="./">Editor</a><a href="./guide.html">Guide</a><a href="./examples.html">Examples</a><a href="./privacy.html">Privacy</a><a href="./sitemap.xml">Sitemap</a></nav>
+      </div>
+    </footer>
+  </body>
+</html>
