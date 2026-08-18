@@ -287,11 +287,11 @@ export function createCodeEditor(host, { value = "", onChange, onCursor } = {}) 
     unfoldAll: () => unfoldAll(view),
     setError(lineNumber, message) {
       if (!lineNumber) {
-        setDiagnostics(view, []);
+        view.dispatch(setDiagnostics(view.state, []));
         return;
       }
       const line = view.state.doc.line(Math.min(Math.max(1, lineNumber), view.state.doc.lines));
-      setDiagnostics(view, [{ from: line.from, to: Math.max(line.from + 1, line.to), severity: "error", message }]);
+      view.dispatch(setDiagnostics(view.state, [{ from: line.from, to: Math.max(line.from + 1, line.to), severity: "error", message }]));
     },
     revealLine(lineNumber) {
       const line = view.state.doc.line(Math.min(Math.max(1, lineNumber), view.state.doc.lines));
